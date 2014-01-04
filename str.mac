@@ -1,0 +1,148 @@
+         MACRO ,                                                        00010000
+&NAME    STRING &INTO=,&PRINT='NOGEN'                                   00020000
+.NOGEN   ANOP                                                           00030000
+         LCLA   &I,&J,&N,&LABEL,&LQ,&P2L,&FLAG,&LEN2,&L                 00040000
+         LCLC   &TO1,&TO2,&P1S,&P2C,&P3C,&P3L                           00050000
+         GBLA   &FIELD,&MAXBL                                           00060000
+         GBLC   &SYSDATC,&FIELDS(9999)                                  00070000
+&SYSDATC SETC  '20'.'&SYSDATE'(7,2)'&SYSDATE'(1,2)'&SYSDATE'(4,2)       00080000
+         MNOTE 'DATE IS &SYSDATC'                                       00090000
+         AIF   (N'&SYSLIST EQ 0).ERR1  NO POSITIONAL OPERANDS, ERROR    00100000
+         AIF   (T'&INTO EQ 'O').ERR2   NO RECEIVING FIELD, ERROR        00110000
+          AIF   (N'&INTO GT 2).ERR2     INTO=(A,32,BLURB)               00120000
+         AIF    (N'&SYSLIST EQ 1 AND '&SYSLIST(1)' EQ 'FINAL_CALL'     X00130000
+                AND T'&INTO EQ 'O').GENL                                00140000
+.*                                                                      00150000
+.GENL    ANOP                                                           00160000
+&TO1     SETC   '=C'                                                    00170000
+&L       SETA  K'&SYSLIST(1)                   LENGTH OF TEXT           00180000
+&J       SETA  N'&SYSLIST                      NUMBER OF TEXT           00190000
+&N       SETA  &L-2                                                     00200000
+&TO2     SETC  '(&N)'                                                   00210000
+         LA    R5,&L                                                    00220000
+         LA    R5,&J      Number os STRINGS                             00230000
+         LA    R5,&TO2                                                  00240000
+         LA    R5,&LEN2                                                 00250000
+         MVC   &INTO&TO2,&TO1&SYSLIST(1)                                00260000
+         AGO   .MEND                                                    00270000
+.ERR1    MNOTE 12,'AT LEAST ONE INPUT FIELD MUST BE SPECIFIED'          00280000
+         AGO   .MEND                                                    00290000
+.ERR2    MNOTE 12,'INVALID OUTPUT AREA SPECIFICATION'                   00300000
+         AGO   .MEND                                                    00310000
+.MEND    ANOP                                                           00320000
+         MEND                                                           00330000
+ADD      TITLE 'contest program'                                        00340000
+ADD      CSECT                                                          00350000
+*DD      AMODE 31                                                       00360000
+*DD      RMODE 24                                                       00370000
+*                                                                       00380000
+*-------------------------------------------------------------------    00390000
+*                                                                       00400000
+*        register equates                                               00410000
+*                                                                       00420000
+*-------------------------------------------------------------------    00430000
+*                                                                       00440000
+R0       EQU   0                       register 0                       00450000
+R1       EQU   1                       register 1                       00460000
+R2       EQU   2                       register 2                       00470000
+R3       EQU   3                       register 3                       00480000
+R4       EQU   4                       register 4                       00490000
+R5       EQU   5                       register 5                       00500000
+R6       EQU   6                       register 6                       00510000
+R7       EQU   7                       register 7                       00520000
+R8       EQU   8                       register 8                       00530000
+R9       EQU   9                       register 9                       00540000
+R10      EQU   10                      register 10                      00550000
+R11      EQU   11                      register 11                      00560000
+BASEREG  EQU   12                      base register                    00570000
+SAVEREG  EQU   13                      save area register               00580000
+RETREG   EQU   14                      caller's return address          00590000
+ENTRYREG EQU   15                      entry address                    00600000
+RETCODE  EQU   15                      return code                      00610000
+         EJECT                                                          00620000
+*                                                                       00630000
+*-------------------------------------------------------------------    00640000
+*                                                                       00650000
+*        standard entry setup, save area chaining, establish            00660000
+*        base register and addressibility                               00670000
+*                                                                       00680000
+*-------------------------------------------------------------------    00690000
+*                                                                       00700000
+         USING ADD,ENTRYREG            establish addressibility         00710000
+         B     SETUP                   branch around eyecatcher         00720000
+         DC    CL8'ADD'                program name                     00730000
+         DC    CL8'&SYSDATE'           program assembled date           00740000
+SETUP    STM   RETREG,BASEREG,12(SAVEREG)  save caller's registers      00750000
+         BALR  BASEREG,R0              establish base register          00760000
+         DROP  ENTRYREG                drop initial base register       00770000
+         USING *,BASEREG               establish addressibilty          00780000
+         LA    ENTRYREG,SAVEAREA       point to this program save ar    00790000
+         ST    SAVEREG,4(,ENTRYREG)    save address of caller's save    00800000
+*                                          area                         00810000
+         ST    ENTRYREG,8(,SAVEREG)    save address of this program     00820000
+*                                          save area                    00830000
+         LR    SAVEREG,ENTRYREG        point to this program saveare    00840000
+         EJECT                                                          00850000
+*                                                                       00860000
+*-------------------------------------------------------------------    00870000
+*                                                                       00880000
+*        program body                                                   00890000
+*                                                                       00900000
+*-------------------------------------------------------------------    00910000
+         OPEN  (PRTLINE,OUTPUT)                                         00920000
+         STRING 'MACRO  MSG',INTO=LINE+1                                00930000
+         PUT   PRTLINE,LINE                                             00940000
+         STRING ' DATE is ',INTO=LINE+1                                 00950000
+         PUT   PRTLINE,LINE                                             00960000
+LOOPINIT DS    0H                                                       00970000
+         MVC   LINE+1(77),STATLIN                                       00980000
+         L     R2,COUNTER                                               00990000
+*                                                                       01000000
+LOOP     DS    0H                                                       01010000
+*                                                                       01020000
+         ED    OUT,TOT                                                  01030000
+         MVC   LINE+77(6),OUT                                           01040000
+         PUT   PRTLINE,LINE                                             01050000
+         MVC   OUT,=X'402020202020'                                     01060000
+         AP    TOT,ONE                                                  01070000
+*                                                                       01080000
+         BCT   2,LOOP                                                   01090000
+*                                                                       01100000
+         CLOSE (PRTLINE)                                                01110000
+*                                                                       01120000
+*-------------------------------------------------------------------    01130000
+*                                                                       01140000
+*        standard exit -  restore caller's registers and                01150000
+*        return to caller                                               01160000
+*                                                                       01170000
+*-------------------------------------------------------------------    01180000
+*                                                                       01190000
+EXIT     DS    0H                      halfword boundary alignment      01200000
+         L     SAVEREG,4(,SAVEREG)     restore caller's save area ad    01210000
+         L     RETREG,12(,SAVEREG)     restore return address regist    01220000
+         LM    R0,BASEREG,20(SAVEREG)  restore all regs. except reg1    01230000
+         BR    RETREG                  return to caller                 01240000
+         EJECT                                                          01250000
+*                                                                       01260000
+*-------------------------------------------------------------------    01270000
+*                                                                       01280000
+*        storage and constant definitions.                              01290000
+*        print output definition.                                       01300000
+*                                                                       01310000
+*-------------------------------------------------------------------    01320000
+*                                                                       01330000
+STATLIN  DS    0CL77                                                    01340000
+         DC    C'WELCOME TO THE MAINFRAME CHALLENGE!! '                 01350000
+         DC    C'THIS IS THE CONTENT OF YOUR TOT COUNTER '              01360000
+*                                                                       01370000
+LINE     DS    0CL81                                                    01380000
+         DC    C' '                                                     01390000
+         DS    CL80                                                     01400000
+PRTLINE  DCB   DSORG=PS,DDNAME=SYSOUT,MACRF=PM,                        X01410000
+               RECFM=FA,LRECL=133,BLKSIZE=133                           01420000
+ONE      DC    P'01'                                                    01430000
+TOT      DC    PL3'1000'                                                01440000
+OUT      DC    X'402020202020'                                          01450000
+SAVEAREA DC    18F'-1'                 register save area               01460000
+COUNTER  DC    F'9001'                                                  01470000
+         END   ADD                                                      01480000
