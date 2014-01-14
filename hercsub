@@ -1,0 +1,34 @@
+#!/usr/bin/perl
+use Socket;
+use IO::Socket::UNIX;
+use IO::Socket::INET;
+#   Submitting jobs via the socket reader for MVS running on Hercules
+#   reader definition #000C    3505 localhost:3505 sockdev trunc ascii eof
+#   comand  hercsub 127.0.0.1:3505 jcl/compile.jcl
+#   nc -w1 localhost 1234 < dummy.jcl
+
+if (@ARGV < 1) {
+  print STDERR "Usage: hercsub socket_spec [job]\n";
+  exit 2;
+}
+
+my $spec = shift @ARGV;
+my $sock;
+my $job  = shift @ARGV;
+ 
+print STDERR "XXXXXXX   $job  $socket $_  XXXXXXXX \n";
+
+if ($spec =~ m{^/}) {
+  $sock = IO::Socket::UNIX->new(Peer => $spec);
+} else {
+  $sock = IO::Socket::INET->new(PeerAddr => $spec);
+}
+
+die "Failed to connect to socket $spec: $!\n" unless defined($sock);
+
+open (MYFILE, $job);
+while (<MYFILE>) {
+#  chomp;
+  print $sock $_;
+} 
+close (MYFILE); 
